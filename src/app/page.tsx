@@ -1,103 +1,130 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+import { v4 as uuidv4 } from "uuid";
+
+interface Scene {
+  id: string;
+  text: string;
+  file: File | null;
+}
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [scenes, setScenes] = useState<Scene[]>([
+    { id: uuidv4(), text: "", file: null },
+  ]);
+  const [loading, setLoading] = useState(false);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  const addScene = () => {
+    setScenes([...scenes, { id: uuidv4(), text: "", file: null }]);
+  };
+
+  const removeScene = (id: string) => {
+    setScenes(scenes.filter((scene) => scene.id !== id));
+  };
+
+  const handleTextChange = (id: string, text: string) => {
+    setScenes(
+      scenes.map((scene) => (scene.id === id ? { ...scene, text } : scene)),
+    );
+  };
+
+  const handleFileChange = (id: string, file: File | null) => {
+    setScenes(
+      scenes.map((scene) => (scene.id === id ? { ...scene, file } : scene)),
+    );
+  };
+
+  const generateVideo = async () => {
+    setLoading(true);
+    setVideoUrl(null);
+
+    const formData = new FormData();
+    const sceneData = scenes.map((scene) => ({
+      text: scene.text,
+    }));
+    formData.append("scenes", JSON.stringify(sceneData));
+    scenes.forEach((scene) => {
+      if (scene.file) {
+        formData.append("files", scene.file);
+      }
+    });
+
+    try {
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        setVideoUrl(url);
+      } else {
+        console.error("Failed to generate video");
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Simple Video Generator</h1>
+      {scenes.map((scene, index) => (
+        <div key={scene.id} className="mb-4 p-4 border rounded">
+          <h2 className="text-lg font-semibold mb-2">Scene {index + 1}</h2>
+          <textarea
+            className="w-full p-2 border rounded mb-2"
+            placeholder="Enter text for this scene"
+            value={scene.text}
+            onChange={(e) => handleTextChange(scene.id, e.target.value)}
+          />
+          <input
+            type="file"
+            accept="image/*,video/*"
+            onChange={(e) =>
+              handleFileChange(scene.id, e.target.files ? e.target.files[0] : null)
+            }
+          />
+          <button
+            className="ml-2 px-2 py-1 bg-red-500 text-white rounded"
+            onClick={() => removeScene(scene.id)}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
+            Remove
+          </button>
+        </div>
+      ))}
+      <button
+        className="px-4 py-2 bg-blue-500 text-white rounded"
+        onClick={addScene}
+      >
+        Add Scene
+      </button>
+      <button
+        className="ml-4 px-4 py-2 bg-green-500 text-white rounded"
+        onClick={generateVideo}
+        disabled={loading}
+      >
+        {loading ? "Generating..." : "Generate Video"}
+      </button>
+
+      {videoUrl && (
+        <div className="mt-4">
+          <h2 className="text-xl font-bold mb-2">Generated Video</h2>
+          <video src={videoUrl} controls className="w-full" />
           <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            href={videoUrl}
+            download="generated-video.mp4"
+            className="text-blue-500"
           >
-            Read our docs
+            Download Video
           </a>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      )}
     </div>
   );
 }
