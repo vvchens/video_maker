@@ -9,7 +9,6 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@types/fluent-ffmpeg": "^2.1.27",
     "@types/uuid": "^10.0.0",
     "edge-tts-node": "^1.5.7",
