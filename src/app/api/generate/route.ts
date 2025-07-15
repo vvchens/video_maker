@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { textToSpeech } from "@/lib/tts";
+import { synthesizeToFile } from "@/lib/tts";
 import { ffmpegPath } from "@/lib/ffmpeg-installer";
 import ffmpeg from "fluent-ffmpeg";
 import fs from "fs/promises";
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       const scene = scenes[i];
       const file = files[i];
       const audioPath = path.join(tempDir, `${i}.mp3`);
-      await textToSpeech(scene.text, audioPath);
+      await synthesizeToFile(scene.text, { outputFile: audioPath });
 
       const audioDuration = await getAudioDuration(audioPath);
       const mediaPath = path.join(tempDir, file.name);
@@ -99,7 +99,7 @@ function createImageScene(
       .audioCodec("aac")
       .audioFilters("apad")
       .outputOptions("-shortest")
-      .on("end", resolve)
+      .on("end", () => resolve())
       .on("error", reject)
       .save(outputPath);
   });
@@ -118,7 +118,7 @@ function createVideoScene(
       .videoCodec("libx264")
       .audioCodec("aac")
       .outputOptions(`-t ${duration}`)
-      .on("end", resolve)
+      .on("end", () => resolve())
       .on("error", reject)
       .save(outputPath);
   });
@@ -134,7 +134,7 @@ function mergeVideos(
       command.input(videoPath);
     });
     command
-      .on("end", resolve)
+      .on("end", () => resolve())
       .on("error", reject)
       .mergeToFile(outputPath, ".");
   });

@@ -1,5 +1,5 @@
 # Stage 1: Build the Next.js application
-FROM node:18-alpine AS builder
+FROM --platform=linux/arm64 node:18-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
@@ -7,7 +7,7 @@ COPY . .
 RUN npm run build
 
 # Stage 2: Create the production image
-FROM node:18-alpine
+FROM --platform=linux/arm64 node:18-alpine
 WORKDIR /app
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/node_modules ./node_modules
